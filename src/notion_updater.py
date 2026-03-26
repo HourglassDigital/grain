@@ -1,4 +1,4 @@
-"""Grain Notion updater — appends extracted updates to the right Notion pages."""
+"""Pulse Notion updater — appends extracted updates to the right Notion pages."""
 
 import requests
 from src.config import NOTION_TOKEN, NOTION_PAGES, DRY_RUN
@@ -44,7 +44,7 @@ def _build_blocks(items: list[dict], date_str: str) -> list[dict]:
         "object": "block",
         "type": "heading_3",
         "heading_3": {
-            "rich_text": [{"type": "text", "text": {"content": f"Grain Update -- {date_str}"}}],
+            "rich_text": [{"type": "text", "text": {"content": f"Pulse Update -- {date_str}"}}],
             "color": "blue_background",
         },
     })
