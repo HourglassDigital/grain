@@ -1,4 +1,4 @@
-"""Grain — The Hourglass memory agent.
+"""Pulse — The Hourglass memory agent.
 
 Reads all Slack channels, extracts decisions/learnings/tool deployments
 using Claude, updates Notion pages, and posts a summary back to Slack.
@@ -24,7 +24,7 @@ def main() -> int:
     now = datetime.now(AEDT)
     date_str = now.strftime("%d %b %Y")
 
-    print("Grain -- Daily Sync")
+    print("Pulse -- Daily Sync")
     print(f"   Date: {date_str}")
     print(f"   Lookback: {LOOKBACK_HOURS}h")
     print(f"   Dry run: {DRY_RUN}")
@@ -65,7 +65,7 @@ def main() -> int:
     slack_message = format_slack_summary(updates, date_str)
     post_summary(slack_message)
 
-    print("\nGrain sync complete.")
+    print("\nPulse sync complete.")
     return 0
 
 
