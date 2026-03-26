@@ -54,7 +54,7 @@ def _fetch_recent_meetings() -> list[dict]:
     return []
 
 
-def _get_meeting_details(meeting_id: str) -> dict | None:
+def _get_meeting_details(meeting_id: str) -> dict:
     """Fetch full meeting details including summary and transcript."""
     if not GRANOLA_API_KEY:
         return None
@@ -90,7 +90,7 @@ Format as a clean Slack message with bold headers and bullet points.
 Keep it concise — the team should be able to read this in 30 seconds."""
 
 
-def _match_project_channel(meeting: dict) -> str | None:
+def _match_project_channel(meeting: dict) -> str:
     """Try to match a meeting to a project channel by title or attendees."""
     title = meeting.get("title", "").lower()
     attendees = " ".join(a.get("name", "") for a in meeting.get("attendees", [])).lower()

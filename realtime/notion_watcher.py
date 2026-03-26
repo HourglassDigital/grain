@@ -22,7 +22,7 @@ def _get_notion_headers():
     }
 
 
-def _get_page_meta(page_id: str) -> dict | None:
+def _get_page_meta(page_id: str) -> dict:
     """Get page metadata including last_edited_time and last_edited_by."""
     try:
         resp = requests.get(f"{NOTION_API}/pages/{page_id}", headers=_get_notion_headers())
@@ -66,7 +66,7 @@ If it looks like a Pulse automated update (contains "Pulse Update" or "Action It
 Otherwise write a concise update message for Slack. Use Slack markdown."""
 
 
-def _summarize_change(page_key: str, content: str) -> str | None:
+def _summarize_change(page_key: str, content: str) -> str:
     """Use Claude to summarize what changed on a Notion page."""
     try:
         ai = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
