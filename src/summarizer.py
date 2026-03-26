@@ -78,24 +78,39 @@ def extract_updates(formatted_messages: str) -> dict:
 def format_slack_summary(updates: dict, date_str: str) -> str:
     """Format updates into a Slack message for #--internal-tooling."""
     if not updates:
-        return f":zap: *Pulse -- {date_str}*\nNo significant updates captured today."
-    lines = [f":zap: *Pulse -- Daily Notion Sync ({date_str})*", ""]
+        return f":zap: *Pulse — {date_str}*\n\nNo significant updates captured today."
+
+    lines = [f":zap: *Pulse — Daily Notion Sync ({date_str})*"]
+    lines.append("")
+    lines.append("———")
+    lines.append("")
+
     page_labels = {
-        "history": ":scroll: Company History",
-        "tools": ":gear: Internal Tools",
-        "products": ":briefcase: Products & Services",
-        "ideas": ":bulb: Product Ideas",
-        "learnings": ":blue_book: Learnings",
-        "tech_stack": ":hammer_and_wrench: Tech Stack",
-        "team": ":busts_in_silhouette: Team",
+        "history": ":scroll:  *Company History*",
+        "tools": ":gear:  *Internal Tools*",
+        "products": ":briefcase:  *Products & Services*",
+        "ideas": ":bulb:  *Product Ideas*",
+        "learnings": ":blue_book:  *Learnings*",
+        "tech_stack": ":hammer_and_wrench:  *Tech Stack*",
+        "team": ":busts_in_silhouette:  *Team*",
     }
+
     total_updates = 0
     for page_key, items in updates.items():
-        label = page_labels.get(page_key, page_key)
-        lines.append(f"*{label}*")
+        label = page_labels.get(page_key, f"*{page_key}*")
+        lines.append(label)
+        lines.append("")
         for item in items:
-            lines.append(f"  - {item.get('title', 'Update')}")
+            title = item.get("title", "Update")
+            bullets = item.get("bullets", [])
+            lines.append(f"•  *{title}*")
+            for bullet in bullets:
+                lines.append(f"    ◦  {bullet}")
             total_updates += 1
         lines.append("")
-    lines.append(f"_Updated {total_updates} items across {len(updates)} Notion pages._")
+        lines.append("———")
+        lines.append("")
+
+    lines.append(f"_Synced {total_updates} updates across {len(updates)} Notion pages._")
+    lines.append(f"_Every pulse counts._ :zap:")
     return "\n".join(lines)
