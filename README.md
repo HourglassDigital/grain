@@ -1,13 +1,13 @@
-# 🏖️ Grain
+# ⚡ Pulse
 
-**The Hourglass memory agent.** Every grain of sand is a captured moment.
+**The Hourglass memory agent.** Every pulse is a captured moment.
 
-Grain reads all Hourglass Slack channels daily, extracts decisions, learnings, and tool deployments using Claude, and documents them in the company Notion workspace. Then posts a summary back to `#--internal-tooling`.
+Pulse reads all Hourglass Slack channels daily, extracts decisions, learnings, and tool deployments using Claude, and documents them in the company Notion workspace. Then posts a summary back to `#--internal-tooling`.
 
 ## What it captures
 
 | Category | Slack Source | Notion Destination |
-|----------|-------------|--------------------|
+|----------|-------------|--------------------||
 | Company decisions & milestones | `#--general`, all channels | Company History & Timeline |
 | New tools, agents, skills | `#--internal-tooling`, `#product-shipped` | Internal Tools & Automations |
 | Sales learnings & pricing | `#--pipeline`, `#--wins`, `#--learning` | Learnings & Playbook |
@@ -21,7 +21,7 @@ Grain reads all Hourglass Slack channels daily, extracts decisions, learnings, a
 ```
 Slack (16 channels)
     ↓ Read via Slack API
-Grain Agent
+Pulse Agent
     ↓ Categorize & summarize via Claude API
 Notion (8 pages)
     ↓ Post summary
@@ -70,7 +70,7 @@ The included workflow runs daily at 7:00 AM AEDT (20:00 UTC previous day). Set t
 ## Notion Page IDs
 
 | Page | ID |
-|------|----|
+|------|----||
 | Home | `1d9210f1ecfc82b4b6b1014bba1742fb` |
 | Company History & Timeline | `32f210f1ecfc81e1ac21f7e84d0cfcbc` |
 | Team | `32f210f1ecfc8180a881fdf9a23eb4a0` |
@@ -84,7 +84,7 @@ The included workflow runs daily at 7:00 AM AEDT (20:00 UTC previous day). Set t
 ## Slack Channel IDs
 
 | Channel | ID |
-|---------|----|
+|---------|----||
 | `#--general` | `C0AMC0JVAPM` |
 | `#--random` | `C0AMJC0H6LS` |
 | `#--wins` | `C0AMW1PA3J8` |
@@ -104,4 +104,4 @@ The included workflow runs daily at 7:00 AM AEDT (20:00 UTC previous day). Set t
 
 ---
 
-Built by Hourglass Digital. Every grain counts.
+Built by Hourglass Digital. Every pulse counts.
