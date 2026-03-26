@@ -10,6 +10,7 @@ from realtime.config import (
     SLACK_BOT_TOKEN, NOTION_TOKEN, ANTHROPIC_API_KEY, MODEL,
     NOTION_PAGES, NOTION_TO_SLACK, NOTION_POLL_INTERVAL, PULSE_BOT_ID,
 )
+from realtime.obs import log, log_error, log_success
 
 NOTION_API = "https://api.notion.com/v1"
 NOTION_VERSION = "2022-06-28"
@@ -90,7 +91,7 @@ def start_watcher():
     """Start the Notion polling loop in a background thread."""
     thread = threading.Thread(target=_poll_loop, daemon=True)
     thread.start()
-    print(f"  Notion watcher started (every {NOTION_POLL_INTERVAL}s)")
+    log(f"Notion watcher started (every {NOTION_POLL_INTERVAL}s)")
 
 
 # Track last edit times
@@ -153,6 +154,6 @@ def _poll_loop():
                             text=f":zap: *Notion updated — {label}*\n\n{summary}",
                             unfurl_links=False,
                         )
-                        print(f"  Notion change: {page_key} → #{channel_id}")
+                        log_success(f"Notion change: {page_key} → #{channel_id}")
                     except Exception as e:
-                        print(f"  Failed to post Notion change: {e}")
+                        log_error(f"Failed to post Notion change: {e}")

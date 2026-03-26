@@ -7,6 +7,7 @@ from slack_bolt import App
 from realtime.config import (
     ANTHROPIC_API_KEY, NOTION_TOKEN, MODEL, NOTION_PAGES,
 )
+from realtime.obs import log, log_error
 
 NOTION_API = "https://api.notion.com/v1"
 NOTION_VERSION = "2022-06-28"
@@ -103,4 +104,4 @@ def register(app: App):
 
         except Exception as e:
             respond(f":x: Something went wrong: {str(e)[:200]}")
-            print(f"  Ask Pulse error: {e}")
+            log_error(f"Ask Pulse error: {e}")

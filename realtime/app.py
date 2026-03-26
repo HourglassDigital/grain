@@ -19,6 +19,8 @@ from realtime.article_watcher import register as register_articles
 from realtime.ask_pulse import register as register_ask
 from realtime.notion_watcher import start_watcher as start_notion_watcher
 from realtime.granola_sync import start_syncer as start_granola_syncer
+from realtime.meeting_prep import start_prep_agent
+from realtime.obs import log, log_error, log_success
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("pulse-realtime")
@@ -38,6 +40,7 @@ def create_app() -> App:
 
 
 def main():
+    log_success("Pulse Realtime Bot starting up")
     print()
     print("=== Pulse Realtime Bot ===")
     print()
@@ -48,10 +51,12 @@ def main():
     print("Starting background services...")
     start_notion_watcher()
     start_granola_syncer()
+    start_prep_agent()
+    print("  Meeting prep: ready")
     print()
 
     # Start Socket Mode
-    print("Connecting to Slack via Socket Mode...")
+    log("Connecting to Slack via Socket Mode...")
     handler = SocketModeHandler(app, SLACK_APP_TOKEN)
     handler.start()
 

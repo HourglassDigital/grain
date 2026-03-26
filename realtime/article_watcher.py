@@ -8,6 +8,7 @@ from realtime.config import (
     ANTHROPIC_API_KEY, MODEL, ARTICLE_CHANNELS, PULSE_BOT_ID,
     USER_MAP,
 )
+from realtime.obs import log, log_error
 
 URL_PATTERN = re.compile(r'<(https?://[^>|]+)(?:\|[^>]*)?>')
 
@@ -27,12 +28,24 @@ Article shared by {who} in #{channel}:
 URL: {url}
 Context: {context}
 
+Before summarizing, consider how this article connects to what Hourglass already knows:
+- AI Audit pricing: 1 interview ≈ $1k, tiers at $3k/$6k/$10k
+- FounderClaw: $2k setup + $99/mo hosting, ~3h setup, targeting 10 beta founders
+- Core philosophy: build for yourself first, sell to others
+- Claude Code as primary dev interface for both founders
+- Speed over polish — ship today, iterate tomorrow
+- Agent pricing insight: can charge human salary equivalent (faster training, no externalities)
+- Key products: AI Audits, AI Builds, FounderClaw, Newsletter Sponsorship
+- Mission: Make Australia AI-native
+
 Write a concise Slack reply:
 1. :newspaper:  *Title or topic* (2-5 words max)
 2. Blank line
 3. 3-5 bullet points summarizing key takeaways (use :small_orange_diamond: before each)
 4. Blank line
 5. :dart:  *Why this matters for Hourglass:* — one concise paragraph on specific relevance to our services, pricing, or operations
+6. Blank line
+7. :link:  *Connections:* — one or two sentences linking this article to Hourglass's existing strategy, pricing, or operations. Be specific.
 
 Use Slack markdown. Keep it tight — no fluff."""
 
@@ -102,7 +115,7 @@ def register(app: App):
                 unfurl_links=False,
                 unfurl_media=False,
             )
-            print(f"  Article reply: #{channel_name} — {url[:60]}")
+            log(f"Article reply: #{channel_name} — {url[:60]}")
 
         except Exception as e:
-            print(f"  Article reply failed: {e}")
+            log_error(f"Article reply failed: {e}")

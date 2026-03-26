@@ -1,13 +1,9 @@
 """Pulse v2 summarizer — enhanced with action items, people tagging, article summaries, and thread prioritization."""
 
 import json
-import anthropic
 
-from src.config import ANTHROPIC_API_KEY, MODEL, MAX_TOKENS, NOTION_PAGES, USER_MAP
-
-
-def get_client() -> anthropic.Anthropic:
-    return anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+from src.config import MODEL, MAX_TOKENS, NOTION_PAGES, USER_MAP
+from src.cost_tracker import get_tracked_client, record_usage
 
 
 SYSTEM_PROMPT = """You are Pulse, the Hourglass Digital memory agent. You read today's Slack messages and extract what matters for the company's Notion documentation.
@@ -33,6 +29,7 @@ SYSTEM_PROMPT = """You are Pulse, the Hourglass Digital memory agent. You read t
 - For articles marked [SHARED_ARTICLE]: summarize the article's key points in 3-5 bullets, then add a bullet on why it's relevant to Hourglass specifically.
 - For action items: include WHO owns it, WHAT they committed to, and any DEADLINE mentioned. If no deadline, note that.
 - Include the Slack permalink (from the "link:" field) for each update so we can backlink.
+- When analyzing messages, also check if any previous action items appear to be completed. Look for signals like "done", "finished X", "shipped X", "deployed X", "completed X". If you detect completions, include them in the "completed_actions" key in your JSON output.
 """
 
 EXTRACT_PROMPT = """Here are today's Slack messages from Hourglass Digital.
@@ -58,6 +55,12 @@ For "articles" items, also include:
   - "url": The article URL
   - "relevance": One sentence on why this matters to Hourglass
 
+Also include a top-level key "completed_actions" — an array of objects with:
+  - "title": The original action title that appears to be completed (match as closely as possible)
+  - "evidence": The message text that shows it's done
+
+If no completed actions are detected, omit the key or use an empty array.
+
 Only include pages with actual updates. Skip empty ones.
 Return ONLY valid JSON, no markdown code fences.
 
@@ -68,13 +71,14 @@ Return ONLY valid JSON, no markdown code fences.
 
 def extract_updates(formatted_messages: str) -> dict:
     """Use Claude to extract structured updates from Slack messages."""
-    client = get_client()
+    client = get_tracked_client()
     response = client.messages.create(
         model=MODEL,
         max_tokens=MAX_TOKENS,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": EXTRACT_PROMPT.format(messages=formatted_messages)}],
     )
+    record_usage(response)
     text = response.content[0].text.strip()
     if text.startswith("```"):
         text = text.split("\n", 1)[1] if "\n" in text else text[3:]
