@@ -1,4 +1,4 @@
-"""Grain Slack poster — sends summary to #--internal-tooling via webhook."""
+"""Pulse Slack poster — sends summary to #--internal-tooling via webhook."""
 
 import requests
 from src.config import SLACK_WEBHOOK_URL, DRY_RUN
