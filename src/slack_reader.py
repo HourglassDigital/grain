@@ -30,9 +30,34 @@ def read_all_channels() -> dict[str, list[dict]]:
             else:
                 print(f"  -- #{channel_name}: no new messages")
         except SlackApiError as e:
-            print(f"  FAIL #{channel_name}: {e.response['error']}")
+            error = e.response["error"]
+            if error in ("not_in_channel", "channel_not_found"):
+                # Auto-join public channels; skip private ones we can't access
+                if _try_join(client, channel_id):
+                    try:
+                        messages = _read_channel(client, channel_id, oldest)
+                        if messages:
+                            all_messages[channel_name] = messages
+                            print(f"  ok #{channel_name}: {len(messages)} messages (joined)")
+                        else:
+                            print(f"  -- #{channel_name}: no new messages (joined)")
+                        continue
+                    except SlackApiError:
+                        pass
+                print(f"  SKIP #{channel_name}: private or inaccessible")
+            else:
+                print(f"  FAIL #{channel_name}: {error}")
 
     return all_messages
+
+
+def _try_join(client: WebClient, channel_id: str) -> bool:
+    """Try to join a channel. Returns True if successful."""
+    try:
+        client.conversations_join(channel=channel_id)
+        return True
+    except SlackApiError:
+        return False
 
 
 def _read_channel(client: WebClient, channel_id: str, oldest: str) -> list[dict]:
