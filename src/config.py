@@ -1,4 +1,4 @@
-"""Grain configuration — channel mappings, page IDs, and constants."""
+"""Pulse configuration — channel mappings, page IDs, and constants."""
 
 import os
 from dotenv import load_dotenv
