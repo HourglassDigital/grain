@@ -7,9 +7,12 @@ load_dotenv()
 
 # --- Secrets ---
 SLACK_BOT_TOKEN = os.environ["SLACK_BOT_TOKEN"]
-SLACK_WEBHOOK_URL = os.environ["SLACK_WEBHOOK_URL"]
+SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL", "")  # Legacy, kept for fallback
 NOTION_TOKEN = os.environ["NOTION_TOKEN"]
 ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
+
+# --- Posting ---
+POSTING_CHANNEL_ID = "C0AMXG15E8L"  # #--internal-tooling
 
 # --- Timing ---
 LOOKBACK_HOURS = int(os.getenv("LOOKBACK_HOURS", "24"))

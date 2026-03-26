@@ -1,17 +1,26 @@
-"""Pulse Slack poster — sends summary to #--internal-tooling via webhook."""
+"""Pulse Slack poster — sends summary to #--internal-tooling as the Pulse bot."""
 
-import requests
-from src.config import SLACK_WEBHOOK_URL, DRY_RUN
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
+from src.config import SLACK_BOT_TOKEN, POSTING_CHANNEL_ID, DRY_RUN
 
 
 def post_summary(message: str) -> bool:
+    """Post the Pulse summary to #--internal-tooling as the Pulse bot."""
     if DRY_RUN:
         print(f"  [DRY RUN] Would post to Slack:\n{message}")
         return True
-    response = requests.post(SLACK_WEBHOOK_URL, json={"text": message})
-    if response.status_code == 200:
-        print("  Posted summary to #--internal-tooling")
+
+    client = WebClient(token=SLACK_BOT_TOKEN)
+    try:
+        client.chat_postMessage(
+            channel=POSTING_CHANNEL_ID,
+            text=message,
+            unfurl_links=False,
+            unfurl_media=False,
+        )
+        print("  Posted summary to #--internal-tooling as Pulse")
         return True
-    else:
-        print(f"  Slack webhook error: {response.status_code}")
+    except SlackApiError as e:
+        print(f"  Slack API error: {e.response['error']}")
         return False
