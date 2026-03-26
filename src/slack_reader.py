@@ -1,4 +1,4 @@
-"""Grain Slack reader — pulls messages from all channels for the lookback window."""
+"""Pulse Slack reader — pulls messages from all channels for the lookback window."""
 
 import time
 from slack_sdk import WebClient
@@ -26,11 +26,11 @@ def read_all_channels() -> dict[str, list[dict]]:
             messages = _read_channel(client, channel_id, oldest)
             if messages:
                 all_messages[channel_name] = messages
-                print(f"  \u2713 #{channel_name}: {len(messages)} messages")
+                print(f"  ok #{channel_name}: {len(messages)} messages")
             else:
-                print(f"  \u00b7 #{channel_name}: no new messages")
+                print(f"  -- #{channel_name}: no new messages")
         except SlackApiError as e:
-            print(f"  \u2717 #{channel_name}: {e.response['error']}")
+            print(f"  FAIL #{channel_name}: {e.response['error']}")
 
     return all_messages
 
@@ -93,5 +93,5 @@ def format_messages_for_claude(channel_messages: dict[str, list[dict]]) -> str:
         for msg in messages:
             parts.append(f"[{msg['user']}]: {msg['text']}")
             for reply in msg.get("thread_replies", []):
-                parts.append(f"  \u21b3 [{reply['user']}]: {reply['text']}")
+                parts.append(f"  > [{reply['user']}]: {reply['text']}")
     return "\n".join(parts)
