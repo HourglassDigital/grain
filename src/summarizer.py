@@ -1,4 +1,4 @@
-"""Grain summarizer — uses Claude to categorize and summarize Slack messages."""
+"""Pulse summarizer — uses Claude to categorize and summarize Slack messages."""
 
 import json
 import anthropic
@@ -10,7 +10,7 @@ def get_client() -> anthropic.Anthropic:
     return anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 
-SYSTEM_PROMPT = """You are Grain, the Hourglass Digital memory agent. Your job is to read today's Slack messages and extract what matters for the company's documentation.
+SYSTEM_PROMPT = """You are Pulse, the Hourglass Digital memory agent. Your job is to read today's Slack messages and extract what matters for the company's documentation.
 
 You categorize content into these Notion pages:
 - history: Company decisions, milestones, team changes, client wins, strategic moves
@@ -78,8 +78,8 @@ def extract_updates(formatted_messages: str) -> dict:
 def format_slack_summary(updates: dict, date_str: str) -> str:
     """Format updates into a Slack message for #--internal-tooling."""
     if not updates:
-        return f":beach_with_umbrella: *Grain -- {date_str}*\nNo significant updates captured today."
-    lines = [f":beach_with_umbrella: *Grain -- Daily Notion Sync ({date_str})*", ""]
+        return f":zap: *Pulse -- {date_str}*\nNo significant updates captured today."
+    lines = [f":zap: *Pulse -- Daily Notion Sync ({date_str})*", ""]
     page_labels = {
         "history": ":scroll: Company History",
         "tools": ":gear: Internal Tools",
