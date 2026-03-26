@@ -1,34 +1,38 @@
-"""Pulse summarizer — uses Claude to categorize and summarize Slack messages."""
+"""Pulse v2 summarizer — enhanced with action items, people tagging, article summaries, and thread prioritization."""
 
 import json
 import anthropic
 
-from src.config import ANTHROPIC_API_KEY, MODEL, MAX_TOKENS, NOTION_PAGES
+from src.config import ANTHROPIC_API_KEY, MODEL, MAX_TOKENS, NOTION_PAGES, USER_MAP
 
 
 def get_client() -> anthropic.Anthropic:
     return anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
 
-SYSTEM_PROMPT = """You are Pulse, the Hourglass Digital memory agent. Your job is to read today's Slack messages and extract what matters for the company's documentation.
+SYSTEM_PROMPT = """You are Pulse, the Hourglass Digital memory agent. You read today's Slack messages and extract what matters for the company's Notion documentation.
 
-You categorize content into these Notion pages:
+## Categories (Notion pages)
 - history: Company decisions, milestones, team changes, client wins, strategic moves
 - tools: New tools built, automations deployed, skills created, infrastructure changes
-- products: Product updates, pricing changes, service offerings, client feedback on products
+- products: Product updates, pricing changes, service offerings, client feedback
 - ideas: New product ideas, feature requests, brainstorms
-- learnings: Lessons learned, pricing insights, process improvements, useful articles/resources
+- learnings: Lessons learned, pricing insights, process improvements, useful resources
 - tech_stack: New tools adopted, migrations, infrastructure decisions
 - team: Team changes, role updates, new members
+- actions: Open action items — when someone commits to doing something ("I'll do X", "let's do X", "need to X by Thursday")
+- articles: Shared articles/links with summaries and relevance to Hourglass
 
-Rules:
-- Only extract MEANINGFUL content. Skip casual chat, greetings, reactions.
-- Preserve specific numbers (prices, dates, metrics).
-- Preserve who said what when it matters for attribution.
+## Rules
+- PRIORITIZE threaded discussions. Messages with [THREAD] tags contain the richest decisions and context. Weight them higher than standalone messages.
+- ALWAYS include who said/decided what using their real name (Michael, Finlay, Suhail). Attribution matters.
+- Preserve specific numbers (prices, dates, metrics, percentages).
 - Capture the WHY behind decisions, not just the what.
-- Use bullet points, be concise.
-- If a message does not fit any category, skip it.
-- Group related messages together.
+- Group related messages into single updates (a pricing discussion = one item, not five).
+- Skip casual chat, greetings, emoji-only messages, bot noise.
+- For articles marked [SHARED_ARTICLE]: summarize the article's key points in 3-5 bullets, then add a bullet on why it's relevant to Hourglass specifically.
+- For action items: include WHO owns it, WHAT they committed to, and any DEADLINE mentioned. If no deadline, note that.
+- Include the Slack permalink (from the "link:" field) for each update so we can backlink.
 """
 
 EXTRACT_PROMPT = """Here are today's Slack messages from Hourglass Digital.
@@ -36,14 +40,25 @@ EXTRACT_PROMPT = """Here are today's Slack messages from Hourglass Digital.
 Analyze them and extract updates for each relevant Notion page.
 
 Return a JSON object where:
-- Keys are Notion page names: "history", "tools", "products", "ideas", "learnings", "tech_stack", "team"
+- Keys are page names: "history", "tools", "products", "ideas", "learnings", "tech_stack", "team", "actions", "articles"
 - Values are arrays of update objects, each with:
-  - "title": Short bold title for the update (5-10 words)
-  - "bullets": Array of bullet point strings with the details
-  - "source_channel": Which Slack channel this came from
+  - "title": Short title (5-10 words)
+  - "bullets": Array of bullet point strings with details
+  - "people": Array of people names involved (e.g. ["Michael", "Finlay"])
+  - "source_channel": Which Slack channel
+  - "permalink": Slack message permalink (from the "link:" field in the message)
   - "importance": "high", "medium", or "low"
 
-Only include pages that have actual updates. Skip pages with nothing new.
+For "actions" items, also include:
+  - "owner": Who owns this action (name)
+  - "deadline": Deadline if mentioned, or "none"
+  - "status": "open"
+
+For "articles" items, also include:
+  - "url": The article URL
+  - "relevance": One sentence on why this matters to Hourglass
+
+Only include pages with actual updates. Skip empty ones.
 Return ONLY valid JSON, no markdown code fences.
 
 --- TODAY'S MESSAGES ---
@@ -62,7 +77,7 @@ def extract_updates(formatted_messages: str) -> dict:
     )
     text = response.content[0].text.strip()
     if text.startswith("```"):
-        text = text.split("\n", 1)[1]
+        text = text.split("\n", 1)[1] if "\n" in text else text[3:]
         if text.endswith("```"):
             text = text[:-3]
         text = text.strip()
@@ -70,19 +85,30 @@ def extract_updates(formatted_messages: str) -> dict:
         updates = json.loads(text)
     except json.JSONDecodeError as e:
         print(f"  Failed to parse Claude response: {e}")
+        print(f"  Raw: {text[:500]}")
         return {}
-    valid_pages = set(NOTION_PAGES.keys()) - {"home", "recommendations"}
+    valid_pages = set(NOTION_PAGES.keys()) | {"actions", "articles"}
+    valid_pages -= {"home", "recommendations"}
     return {k: v for k, v in updates.items() if k in valid_pages and v}
 
 
-def format_slack_summary(updates: dict, date_str: str) -> str:
-    """Format updates into a Slack message for #--internal-tooling."""
-    if not updates:
-        return f":zap: *Pulse — {date_str}*\n\nNo significant updates captured today."
+def _resolve_people_mentions(people: list[str]) -> str:
+    """Convert people names to Slack @mentions."""
+    name_to_id = {v["name"]: v["mention"] for v in USER_MAP.values()}
+    mentions = []
+    for name in people:
+        mentions.append(name_to_id.get(name, name))
+    return ", ".join(mentions)
 
-    lines = [f":zap: *Pulse — Daily Notion Sync ({date_str})*"]
+
+def format_slack_summary(updates: dict, date_str: str) -> str:
+    """Format updates into a Slack message with @mentions and clean formatting."""
+    if not updates:
+        return f":zap: *Pulse -- {date_str}*\n\nNo significant updates captured today."
+
+    lines = [f":zap: *Pulse -- Daily Sync ({date_str})*"]
     lines.append("")
-    lines.append("———")
+    lines.append("---")
     lines.append("")
 
     page_labels = {
@@ -93,24 +119,62 @@ def format_slack_summary(updates: dict, date_str: str) -> str:
         "learnings": ":blue_book:  *Learnings*",
         "tech_stack": ":hammer_and_wrench:  *Tech Stack*",
         "team": ":busts_in_silhouette:  *Team*",
+        "actions": ":clipboard:  *Action Items*",
+        "articles": ":newspaper:  *Articles & Intel*",
     }
 
+    # Render actions first if present (most actionable)
+    ordered_keys = []
+    if "actions" in updates:
+        ordered_keys.append("actions")
+    for k in updates:
+        if k != "actions":
+            ordered_keys.append(k)
+
     total_updates = 0
-    for page_key, items in updates.items():
+    for page_key in ordered_keys:
+        items = updates[page_key]
         label = page_labels.get(page_key, f"*{page_key}*")
         lines.append(label)
         lines.append("")
+
         for item in items:
             title = item.get("title", "Update")
             bullets = item.get("bullets", [])
-            lines.append(f"•  *{title}*")
+            people = item.get("people", [])
+
+            # Build title with people mentions
+            people_str = ""
+            if people:
+                people_str = f" ({_resolve_people_mentions(people)})"
+
+            if page_key == "actions":
+                owner = item.get("owner", "?")
+                deadline = item.get("deadline", "none")
+                name_to_id = {v["name"]: v["mention"] for v in USER_MAP.values()}
+                owner_mention = name_to_id.get(owner, owner)
+                deadline_str = f" | due: *{deadline}*" if deadline != "none" else ""
+                lines.append(f":white_square:  *{title}*  -- {owner_mention}{deadline_str}")
+            elif page_key == "articles":
+                url = item.get("url", "")
+                relevance = item.get("relevance", "")
+                lines.append(f":link:  *{title}*{people_str}")
+                if url:
+                    lines.append(f"    {url}")
+                if relevance:
+                    lines.append(f"    _Why it matters:_ {relevance}")
+            else:
+                lines.append(f":black_small_square:  *{title}*{people_str}")
+
             for bullet in bullets:
-                lines.append(f"    ◦  {bullet}")
+                lines.append(f"    :small_orange_diamond:  {bullet}")
+
             total_updates += 1
+
         lines.append("")
-        lines.append("———")
+        lines.append("---")
         lines.append("")
 
     lines.append(f"_Synced {total_updates} updates across {len(updates)} Notion pages._")
-    lines.append(f"_Every pulse counts._ :zap:")
+    lines.append("_Every pulse counts._ :zap:")
     return "\n".join(lines)

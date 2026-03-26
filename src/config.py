@@ -1,4 +1,4 @@
-"""Pulse configuration — channel mappings, page IDs, and constants."""
+"""Pulse v2 configuration — channel mappings, page IDs, user map, and constants."""
 
 import os
 from dotenv import load_dotenv
@@ -7,16 +7,34 @@ load_dotenv()
 
 # --- Secrets ---
 SLACK_BOT_TOKEN = os.environ["SLACK_BOT_TOKEN"]
-SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL", "")  # Legacy, kept for fallback
+SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL", "")
 NOTION_TOKEN = os.environ["NOTION_TOKEN"]
 ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
 
 # --- Posting ---
 POSTING_CHANNEL_ID = "C0AMXG15E8L"  # #--internal-tooling
+WORKSPACE_URL = "https://hourglass-u322467.slack.com"
 
 # --- Timing ---
 LOOKBACK_HOURS = int(os.getenv("LOOKBACK_HOURS", "24"))
 DRY_RUN = os.getenv("DRY_RUN", "false").lower() == "true"
+
+# --- User Map (Slack ID -> display name + mention) ---
+USER_MAP = {
+    "U0AM2U70V2B": {"name": "Michael", "mention": "<@U0AM2U70V2B>"},
+    "U0AMEV059E1": {"name": "Finlay", "mention": "<@U0AMEV059E1>"},
+    "U0ANV4NPQEA": {"name": "Suhail", "mention": "<@U0ANV4NPQEA>"},
+    "U0ANUB74CQ0": {"name": "Glassy", "mention": "Glassy"},
+    "U0ANVJK1Q5C": {"name": "Pulse", "mention": "Pulse"},
+}
+
+def resolve_user(user_id: str) -> str:
+    """Resolve Slack user ID to display name."""
+    return USER_MAP.get(user_id, {}).get("name", user_id)
+
+def resolve_mention(user_id: str) -> str:
+    """Resolve Slack user ID to @mention string."""
+    return USER_MAP.get(user_id, {}).get("mention", f"<@{user_id}>")
 
 # --- Notion Page IDs ---
 NOTION_PAGES = {
@@ -61,4 +79,4 @@ MIN_MESSAGE_LENGTH = 10
 
 # --- Claude ---
 MODEL = "claude-sonnet-4-6"
-MAX_TOKENS = 4096
+MAX_TOKENS = 8192
