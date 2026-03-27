@@ -1,11 +1,12 @@
-"""Ask Pulse — /pulse slash command to query company knowledge."""
+"""Ask Pulse — /pulse slash command + @Pulse mentions to query company knowledge."""
 
+import re
 import requests
 import anthropic
 from slack_bolt import App
 
 from realtime.config import (
-    ANTHROPIC_API_KEY, NOTION_TOKEN, MODEL, NOTION_PAGES,
+    ANTHROPIC_API_KEY, NOTION_TOKEN, MODEL, NOTION_PAGES, PULSE_BOT_ID,
 )
 from realtime.obs import log, log_error
 
@@ -67,6 +68,53 @@ If the answer comes from a specific page, mention which one (e.g. "from Learning
 """
 
 
+def _answer_question(question: str) -> str:
+    """Query the Notion knowledge base and return an answer."""
+    knowledge = _build_knowledge_base()
+    if not knowledge.strip():
+        return ":warning: Couldn't load Notion pages. Try again in a moment."
+
+    ai = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    response = ai.messages.create(
+        model=MODEL,
+        max_tokens=2048,
+        messages=[{
+            "role": "user",
+            "content": ASK_PROMPT.format(knowledge=knowledge, question=question),
+        }],
+    )
+    return response.content[0].text.strip()
+
+
+def handle_mention(event, say):
+    """Respond when someone @mentions Pulse in a message.
+
+    Called from article_watcher's message handler when a mention is detected.
+    """
+    text = event.get("text", "")
+    # Strip the bot mention to get the actual question
+    question = re.sub(rf"<@{PULSE_BOT_ID}>", "", text).strip()
+    # Also strip other user mentions from the question
+    question = re.sub(r"<@[A-Z0-9]+>", "", question).strip()
+    thread_ts = event.get("thread_ts", event.get("ts"))
+
+    if not question:
+        say(
+            text=":zap: *Pulse* — Tag me with a question about Hourglass and I'll answer from our knowledge base.",
+            thread_ts=thread_ts,
+        )
+        return
+
+    log(f"@Pulse mention: {question[:100]}")
+
+    try:
+        answer = _answer_question(question)
+        say(text=f":zap: *Pulse*\n\n{answer}", thread_ts=thread_ts)
+    except Exception as e:
+        say(text=f":x: Something went wrong: {str(e)[:200]}", thread_ts=thread_ts)
+        log_error(f"Ask Pulse mention error: {e}")
+
+
 def register(app: App):
     """Register /pulse slash command."""
 
@@ -82,26 +130,8 @@ def register(app: App):
         respond(f":zap: _Thinking about: {question}_")
 
         try:
-            # Build knowledge base from Notion
-            knowledge = _build_knowledge_base()
-
-            if not knowledge.strip():
-                respond(":warning: Couldn't load Notion pages. Try again in a moment.")
-                return
-
-            # Ask Claude
-            ai = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-            response = ai.messages.create(
-                model=MODEL,
-                max_tokens=2048,
-                messages=[{
-                    "role": "user",
-                    "content": ASK_PROMPT.format(knowledge=knowledge, question=question),
-                }],
-            )
-            answer = response.content[0].text.strip()
+            answer = _answer_question(question)
             respond(f":zap: *Pulse*\n\n{answer}")
-
         except Exception as e:
             respond(f":x: Something went wrong: {str(e)[:200]}")
             log_error(f"Ask Pulse error: {e}")

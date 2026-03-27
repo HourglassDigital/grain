@@ -8,6 +8,7 @@ from realtime.config import (
     ANTHROPIC_API_KEY, MODEL, ARTICLE_CHANNELS, PULSE_BOT_ID,
     USER_MAP,
 )
+from realtime.ask_pulse import handle_mention
 from realtime.obs import log, log_error
 
 URL_PATTERN = re.compile(r'<(https?://[^>|]+)(?:\|[^>]*)?>')
@@ -55,17 +56,23 @@ def register(app: App):
 
     @app.event("message")
     def handle_message(event, say, client):
-        # Only watch brain-* channels
-        channel = event.get("channel", "")
-        if channel not in ARTICLE_CHANNELS:
-            return
-
         # Skip bot messages, edits, deletes
         if event.get("subtype") in ("bot_message", "message_changed", "message_deleted"):
             return
         if event.get("bot_id"):
             return
         if event.get("user") == PULSE_BOT_ID:
+            return
+
+        # Check if Pulse was @mentioned — handle as a question
+        text = event.get("text", "")
+        if f"<@{PULSE_BOT_ID}>" in text:
+            handle_mention(event, say)
+            return
+
+        # Only watch brain-* channels for article auto-reply
+        channel = event.get("channel", "")
+        if channel not in ARTICLE_CHANNELS:
             return
 
         # Skip thread replies (only respond to top-level shares)
