@@ -40,7 +40,7 @@ def create_app() -> App:
 
 
 def main():
-    log_success("Pulse Realtime Bot starting up")
+    log("Pulse Realtime Bot starting up")
     print()
     print("=== Pulse Realtime Bot ===")
     print()
